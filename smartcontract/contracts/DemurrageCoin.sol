@@ -21,10 +21,13 @@ contract DemurrageCoin is ERC20Mutable, Ownable, AccessControl {
     mapping(address => uint256) private _balances;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
+    IERC20 stableCoin;
     address feeCollector;
     uint256 blockTimestamp = block.timestamp;
     uint256 transactionFee; // transaction fee with 3 decimals (e.g. for 0.15%, transactionFee = 150)
+    uint256 withdrawalFee; // fee to exchange citizen coins back to stable coin with 3 decimals precision
 
     /// Struct to hold the history of changes made to the demurrage rate
     struct DemurrageRate {
@@ -103,17 +106,23 @@ contract DemurrageCoin is ERC20Mutable, Ownable, AccessControl {
     constructor(
         string memory _name,
         string memory _symbol,
+        address stableCoinAddress,
         address _feeCollector,
-        uint256 _transactionFees,
+        uint256 _withdrawalFee,
+        uint256 _transactionFee,
         uint256 _demurrageRate,
         uint256 _demurragePeriodLength,
         uint256 _firstPeriodTimestamp
     ) ERC20Mutable(_name, _symbol) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, msg.sender);
+        _setupRole(DAO_ROLE, _feeCollector);
 
         feeCollector = _feeCollector;
-        transactionFee = _transactionFees;
+        withdrawalFee = _withdrawalFee;
+        transactionFee = _transactionFee;
+
+        stableCoin = IERC20(stableCoinAddress);
 
         _rateDecimals = 6;
 
@@ -194,20 +203,39 @@ contract DemurrageCoin is ERC20Mutable, Ownable, AccessControl {
         _lastTimeAccountBalanceChanged[account] = blockTimestamp;
     }
 
-    function _chargeTransactionFee(address from, uint256 transactionAmount)
+    function computeFees(uint256 amount, uint256 fees)
+        internal
+        view
+        returns (uint256)
+    {
+        return (fees * amount) / (10**uint256(_rateDecimals));
+    }
+
+    function _chargeFee(uint256 _fee, address to) internal returns (bool) {
+        if (_fee == 0) {
+            return false;
+        }
+        console.log(
+            ">>> _chargeFee of",
+            _fee / 10**16,
+            "to",
+            substring(toString(to), 0, 6)
+        );
+        if (to == msg.sender) {
+            super.transfer(feeCollector, _fee);
+        } else {
+            super.transferFrom(to, feeCollector, _fee);
+        }
+        uint256 collectedFees = balanceOf(feeCollector);
+        console.log("Fees collected (in cents)", collectedFees / 10**16);
+        return true;
+    }
+
+    function _chargeTransactionFee(address to, uint256 transactionAmount)
         internal
     {
-        if (transactionFee == 0) {
-            return;
-        }
-        uint256 fees = (transactionFee * transactionAmount) /
-            (10**uint256(_rateDecimals));
-        console.log(">>> _chargeTransactionFee of", fees);
-        if (from == msg.sender) {
-            super.transfer(feeCollector, fees);
-        } else {
-            super.transferFrom(from, feeCollector, fees);
-        }
+        uint256 _fee = computeFees(transactionAmount, transactionFee);
+        _chargeFee(_fee, to);
     }
 
     /**
@@ -297,19 +325,44 @@ contract DemurrageCoin is ERC20Mutable, Ownable, AccessControl {
     /**
      * @dev Mint new coins.
      * Before the minting and account of receiver are updated with demurrage.
-     * @param to Address to put the minted coins into.
      * @param value Amount of tokens to mint.
      * @return 'true' on success.
      */
-    function mint(address to, uint256 value)
-        public
-        onlyRole(MINTER_ROLE)
-        returns (bool)
-    {
-        console.log(">>> minting", value, "to", substring(toString(to), 0, 6));
-        updateBalanceWithDemurrage(to);
-        _mint(to, value);
-        _lastTimeAccountBalanceChanged[to] = blockTimestamp;
+
+    function mint(uint256 value) public returns (bool) {
+        stableCoin.transferFrom(msg.sender, address(this), value);
+        console.log(
+            ">>> minting",
+            value / 10**18,
+            "to",
+            substring(toString(msg.sender), 0, 6)
+        );
+        updateBalanceWithDemurrage(msg.sender);
+        _mint(msg.sender, value);
+        _lastTimeAccountBalanceChanged[msg.sender] = blockTimestamp;
+        return true;
+    }
+
+    function withdraw(uint256 value) public returns (bool) {
+        updateBalanceWithDemurrage(msg.sender);
+
+        uint256 _fee = computeFees(value, withdrawalFee);
+        console.log(
+            "Withdrawing",
+            value / 10**18,
+            "fees (in cents)",
+            _fee / 10**16
+        );
+        uint256 balance = balanceOf(msg.sender);
+        require(balance > value + _fee, "Not enough balance");
+
+        _chargeFee(_fee, msg.sender);
+        uint256 senderBalance = balanceOf(msg.sender);
+
+        stableCoin.transfer(msg.sender, value);
+
+        // We burn the coins
+        _burn(msg.sender, value);
         return true;
     }
 
@@ -393,6 +446,10 @@ contract DemurrageCoin is ERC20Mutable, Ownable, AccessControl {
                 currentRate.rate,
                 elapsedDays(currentRate.startFrom, blockTimestamp)
             );
+
+            if (currentRate.rate == 0) {
+                continue;
+            }
 
             // Check if there will be more demurrage changes to apply
             bool moreChanges = i < _demurrageRateHistoryCount - 1 &&

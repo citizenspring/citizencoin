@@ -13,3 +13,5 @@ export { GreeterFactory } from "./GreeterFactory";
 export type { Greeter } from "./Greeter";
 export { MiniDaoCoinFactory } from "./MiniDaoCoinFactory";
 export type { MiniDaoCoin } from "./MiniDaoCoin";
+export { StableCoinFactory } from "./StableCoinFactory";
+export type { StableCoin } from "./StableCoin";

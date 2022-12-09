@@ -22,6 +22,7 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface BrusselsCoinInterface extends ethers.utils.Interface {
   functions: {
+    "DAO_ROLE()": FunctionFragment;
     "DEFAULT_ADMIN_ROLE()": FunctionFragment;
     "MINTER_ROLE()": FunctionFragment;
     "allowance(address,address)": FunctionFragment;
@@ -36,7 +37,7 @@ interface BrusselsCoinInterface extends ethers.utils.Interface {
     "increaseAllowance(address,uint256)": FunctionFragment;
     "increaseAllowanceFor(address,address,uint256)": FunctionFragment;
     "max(uint256,uint256)": FunctionFragment;
-    "mint(address,uint256)": FunctionFragment;
+    "mint(uint256)": FunctionFragment;
     "name()": FunctionFragment;
     "owner()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
@@ -55,8 +56,10 @@ interface BrusselsCoinInterface extends ethers.utils.Interface {
     "transferOwnership(address)": FunctionFragment;
     "updateBalanceWithDemurrage(address)": FunctionFragment;
     "updateDemurrageRate(uint256,uint256)": FunctionFragment;
+    "withdraw(uint256)": FunctionFragment;
   };
 
+  encodeFunctionData(functionFragment: "DAO_ROLE", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "DEFAULT_ADMIN_ROLE",
     values?: undefined
@@ -110,10 +113,7 @@ interface BrusselsCoinInterface extends ethers.utils.Interface {
     functionFragment: "max",
     values: [BigNumberish, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "mint",
-    values: [string, BigNumberish]
-  ): string;
+  encodeFunctionData(functionFragment: "mint", values: [BigNumberish]): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -177,7 +177,12 @@ interface BrusselsCoinInterface extends ethers.utils.Interface {
     functionFragment: "updateDemurrageRate",
     values: [BigNumberish, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "withdraw",
+    values: [BigNumberish]
+  ): string;
 
+  decodeFunctionResult(functionFragment: "DAO_ROLE", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "DEFAULT_ADMIN_ROLE",
     data: BytesLike
@@ -268,6 +273,7 @@ interface BrusselsCoinInterface extends ethers.utils.Interface {
     functionFragment: "updateDemurrageRate",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
 
   events: {
     "Approval(address,address,uint256)": EventFragment;
@@ -302,6 +308,14 @@ export class BrusselsCoin extends Contract {
   interface: BrusselsCoinInterface;
 
   functions: {
+    DAO_ROLE(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
+    "DAO_ROLE()"(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
     DEFAULT_ADMIN_ROLE(overrides?: CallOverrides): Promise<{
       0: string;
     }>;
@@ -491,13 +505,11 @@ export class BrusselsCoin extends Contract {
     }>;
 
     mint(
-      to: string,
       value: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "mint(address,uint256)"(
-      to: string,
+    "mint(uint256)"(
       value: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
@@ -703,7 +715,21 @@ export class BrusselsCoin extends Contract {
       _startFrom: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
+
+    withdraw(
+      value: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "withdraw(uint256)"(
+      value: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
   };
+
+  DAO_ROLE(overrides?: CallOverrides): Promise<string>;
+
+  "DAO_ROLE()"(overrides?: CallOverrides): Promise<string>;
 
   DEFAULT_ADMIN_ROLE(overrides?: CallOverrides): Promise<string>;
 
@@ -850,13 +876,11 @@ export class BrusselsCoin extends Contract {
   ): Promise<BigNumber>;
 
   mint(
-    to: string,
     value: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "mint(address,uint256)"(
-    to: string,
+  "mint(uint256)"(
     value: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
@@ -1033,7 +1057,21 @@ export class BrusselsCoin extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
+  withdraw(
+    value: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "withdraw(uint256)"(
+    value: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
   callStatic: {
+    DAO_ROLE(overrides?: CallOverrides): Promise<string>;
+
+    "DAO_ROLE()"(overrides?: CallOverrides): Promise<string>;
+
     DEFAULT_ADMIN_ROLE(overrides?: CallOverrides): Promise<string>;
 
     "DEFAULT_ADMIN_ROLE()"(overrides?: CallOverrides): Promise<string>;
@@ -1178,14 +1216,9 @@ export class BrusselsCoin extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    mint(
-      to: string,
-      value: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    mint(value: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
 
-    "mint(address,uint256)"(
-      to: string,
+    "mint(uint256)"(
       value: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>;
@@ -1361,6 +1394,13 @@ export class BrusselsCoin extends Contract {
       _startFrom: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    withdraw(value: BigNumberish, overrides?: CallOverrides): Promise<boolean>;
+
+    "withdraw(uint256)"(
+      value: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
   };
 
   filters: {
@@ -1399,6 +1439,10 @@ export class BrusselsCoin extends Contract {
   };
 
   estimateGas: {
+    DAO_ROLE(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "DAO_ROLE()"(overrides?: CallOverrides): Promise<BigNumber>;
+
     DEFAULT_ADMIN_ROLE(overrides?: CallOverrides): Promise<BigNumber>;
 
     "DEFAULT_ADMIN_ROLE()"(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1546,14 +1590,9 @@ export class BrusselsCoin extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    mint(
-      to: string,
-      value: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
+    mint(value: BigNumberish, overrides?: Overrides): Promise<BigNumber>;
 
-    "mint(address,uint256)"(
-      to: string,
+    "mint(uint256)"(
       value: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
@@ -1729,9 +1768,20 @@ export class BrusselsCoin extends Contract {
       _startFrom: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
+
+    withdraw(value: BigNumberish, overrides?: Overrides): Promise<BigNumber>;
+
+    "withdraw(uint256)"(
+      value: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    DAO_ROLE(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "DAO_ROLE()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     DEFAULT_ADMIN_ROLE(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -1887,13 +1937,11 @@ export class BrusselsCoin extends Contract {
     ): Promise<PopulatedTransaction>;
 
     mint(
-      to: string,
       value: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "mint(address,uint256)"(
-      to: string,
+    "mint(uint256)"(
       value: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
@@ -2067,6 +2115,16 @@ export class BrusselsCoin extends Contract {
     "updateDemurrageRate(uint256,uint256)"(
       newRate: BigNumberish,
       _startFrom: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    withdraw(
+      value: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "withdraw(uint256)"(
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };
